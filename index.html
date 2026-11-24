@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CE 402 Geotechnical Engineering Platform</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230F4C81'/%3E%3Crect x='6' y='8' width='20' height='5' fill='%23fff'/%3E%3Crect x='6' y='13' width='20' height='6' fill='%230D9488'/%3E%3Crect x='6' y='19' width='20' height='6' fill='%2394A3B8'/%3E%3Cpath d='M3 16h26' stroke='%23fff' stroke-dasharray='3 2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="top-row">
+      <div class="title">
+        <h1>CE 402 Geotechnical Engineering Platform</h1>
+        <p>IIT Mandi · SI units: kN, kPa, m, mm</p>
+      </div>
+      <div class="actions">
+        <button id="btn-sample" type="button">Load Sample Profile</button>
+        <button id="btn-import" type="button">Import JSON</button>
+        <button id="btn-export" type="button" class="primary">Export JSON</button>
+        <input id="file-import" type="file" accept="application/json,.json" hidden>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="p1" aria-selected="true">P1 Soil Profile</button>
+      <button role="tab" data-tab="p2" aria-selected="false">P2 Parameter Tools</button>
+      <button role="tab" data-tab="p3" aria-selected="false">P3 Bearing Capacity</button>
+      <button role="tab" data-tab="p4" aria-selected="false">P4 Stress Increase</button>
+      <button role="tab" data-tab="p5" aria-selected="false">P5 Settlement</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+<div id="global-msg"></div>
+
+<!-- ============ P1 ============ -->
+<section id="p1" class="panel active">
+  <div class="card">
+    <h2>Water table and soil layers</h2>
+    <div class="inline">
+      <div class="field"><label for="wt-measured">Measured WT depth</label><div class="inp"><input id="wt-measured" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
+      <div class="field"><label for="wt-design">Design WT depth</label><div class="inp"><input id="wt-design" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="layers-tbl">
+        <thead><tr>
+          <th class="l">#</th><th>Top<small>m</small></th><th>Bottom<small>m</small></th><th class="l">Soil type</th>
+          <th>γ moist<small>kN/m³</small></th><th>γ sat<small>kN/m³</small></th><th>c′<small>kPa</small></th><th>φ′<small>deg</small></th>
+          <th>s<sub>u</sub><small>kPa</small></th><th>E<sub>s</sub><small>kPa</small></th><th>e₀<small>–</small></th><th>C<sub>c</sub><small>–</small></th>
+          <th>C<sub>r</sub><small>–</small></th><th>σ′<sub>p</sub><small>kPa</small></th><th>c<sub>v</sub><small>m²/s</small></th><th></th>
+        </tr></thead>
+        <tbody id="layers-body"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px"><button id="btn-add-layer" type="button" class="ghost">Add layer</button></div>
+    <p class="note">Required: top, bottom, type, γ moist, γ sat, c′, φ′. Leave optional cells blank when not needed. Layers must be contiguous.</p>
+    <div id="p1-msg"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Borehole profile</h2>
+      <div id="bh-wrap"></div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Effective stress at layer mid-depth</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th class="l">Layer<small>#</small></th><th>z<sub>mid</sub><small>m</small></th><th>σ′<sub>v0</sub> design WT<small>kPa</small></th><th>σ′<sub>v0</sub> measured WT<small>kPa</small></th></tr></thead>
+          <tbody id="mid-body"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h2>Stress at a single depth</h2>
+        <div class="inline" style="margin-bottom:0">
+          <div class="field" style="width:150px"><label for="calc-depth">Depth z</label><div class="inp"><input id="calc-depth" type="number" step="0.1" min="0" value="3"><span class="unit">m</span></div></div>
+          <div class="field" style="width:170px"><label for="calc-wt">Water table</label><select id="calc-wt"><option value="design">Design WT</option><option value="measured">Measured WT</option></select></div>
+        </div>
+        <div id="calc-out" class="result"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ P2 ============ -->
+<section id="p2" class="panel">
+  <div class="card">
+    <h2>SPT N-value corrections (IS 2131:1981)</h2>
+    <p class="note">Uses the <b>measured</b> water table and σ′<sub>v0</sub> from the P1 profile.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th class="l">#</th><th>Depth<small>m</small></th><th>N field<small>blows/30 cm</small></th><th>Cohesionless<small>yes/no</small></th><th>Fine sand / silt<small>yes/no</small></th>
+        <th>σ′<sub>v0</sub><small>kPa</small></th><th>Below WT<small>yes/no</small></th><th>C<sub>N</sub> raw<small>–</small></th><th>C<sub>N</sub><small>–</small></th>
+        <th>N′<small>blows/30 cm</small></th><th>N″<small>blows/30 cm</small></th><th class="l">Dilatancy check</th><th>φ′ est.<small>deg</small></th><th></th>
+      </tr></thead>
+      <tbody id="spt-body"></tbody>
+    </table></div>
+    <div style="margin-top:10px"><button id="btn-add-spt" type="button" class="ghost">Add SPT test</button></div>
+    <div id="spt-msg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Direct shear test: OLS Mohr-Coulomb fit</h2>
+    <div class="grid2">
+      <div>
+        <div class="tbl-wrap"><table style="width:auto;min-width:100%">
+          <thead><tr><th class="l">#</th><th>σ<sub>n</sub><small>kPa</small></th><th>τ<sub>f</sub><small>kPa</small></th><th>τ fitted<small>kPa</small></th><th>Residual<small>kPa</small></th><th></th></tr></thead>
+          <tbody id="ds-body"></tbody>
+        </table></div>
+        <div style="margin-top:10px"><button id="btn-add-ds" type="button" class="ghost">Add data point</button></div>
+        <div id="ds-out"></div>
+      </div>
+      <div class="chart-box"><canvas id="ds-chart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ P3 ============ -->
+<section id="p3" class="panel">
+  <div class="card">
+    <h2>Footing and base soil</h2>
+    <div class="grid3">
+      <div class="field"><label for="f-shape">Shape</label><select id="f-shape"><option value="strip">Strip</option><option value="square">Square</option><option value="rectangular">Rectangular</option><option value="circular">Circular</option></select></div>
+      <div class="field"><label for="f-B">Width / diameter B</label><div class="inp"><input id="f-B" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
+      <div class="field"><label for="f-L">Length L</label><div class="inp"><input id="f-L" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
+      <div class="field"><label for="f-Df">Embedment D<sub>f</sub></label><div class="inp"><input id="f-Df" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
+      <div class="field"><label for="f-V">Vertical load V</label><div class="inp"><input id="f-V" type="number" step="10" min="0"><span class="unit">kN</span></div></div>
+      <div class="field"><label for="f-H">Horizontal load H</label><div class="inp"><input id="f-H" type="number" step="1" min="0"><span class="unit">kN</span></div></div>
+      <div class="field"><label for="f-Mx">Moment M<sub>x</sub></label><div class="inp"><input id="f-Mx" type="number" step="1"><span class="unit">kNm</span></div></div>
+      <div class="field"><label for="f-My">Moment M<sub>y</sub></label><div class="inp"><input id="f-My" type="number" step="1"><span class="unit">kNm</span></div></div>
+      <div class="field"><label for="f-fos">Factor of safety</label><div class="inp"><input id="f-fos" type="number" step="0.1" min="1"><span class="unit">–</span></div></div>
+      <div class="field"><label for="f-mode">Shear mode</label><select id="f-mode"><option value="auto">Auto (by φ′)</option><option value="general">General shear</option><option value="local">Local shear</option></select></div>
+      <div class="field"><label for="f-wt">Water table</label><select id="f-wt"><option value="design">Design WT</option><option value="measured">Measured WT</option></select></div>
+    </div>
+    <h3>Base soil (auto-filled from P1 at D<sub>f</sub>)</h3>
+    <div class="grid3">
+      <div class="field"><label for="f-gamma">γ below base</label><div class="inp"><input id="f-gamma" type="number" step="0.1" min="0"><span class="unit">kN/m³</span></div></div>
+      <div class="field"><label for="f-c">c′</label><div class="inp"><input id="f-c" type="number" step="1" min="0"><span class="unit">kPa</span></div></div>
+      <div class="field"><label for="f-phi">φ′</label><div class="inp"><input id="f-phi" type="number" step="0.5" min="0"><span class="unit">deg</span></div></div>
+      <div class="field"><label>&nbsp;</label><button id="btn-refill" type="button">Re-fill from P1</button></div>
+    </div>
+    <p class="note" id="f-note"></p>
+    <div id="p3-msg"></div>
+  </div>
+  <div id="p3-kpis" class="kpis"></div>
+  <div class="card">
+    <h2>Factor breakdown (IS 6403:1981)</h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th class="l">Quantity</th><th class="l">Symbol</th><th>Value</th><th>Unit</th><th class="l">Note</th></tr></thead>
+      <tbody id="p3-factors"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ============ P4 ============ -->
+<section id="p4" class="panel">
+  <div class="card">
+    <h2>Stress increase with depth</h2>
+    <div class="grid3">
+      <div class="field"><label for="s-q">Uniform pressure q</label><div class="inp"><input id="s-q" type="number" step="10" min="0"><span class="unit">kPa</span></div></div>
+      <div class="field"><label for="s-shape">Shape</label><select id="s-shape"><option value="strip">Strip</option><option value="square">Square</option><option value="rectangular">Rectangular</option><option value="circular">Circular</option></select></div>
+      <div class="field"><label for="s-B">Width / diameter B</label><div class="inp"><input id="s-B" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
+      <div class="field"><label for="s-L">Length L</label><div class="inp"><input id="s-L" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
+      <div class="field"><label for="s-zmax">Max depth z<sub>max</sub></label><div class="inp"><input id="s-zmax" type="number" step="0.5" min="0"><span class="unit">m</span></div></div>
+      <div class="field"><label for="s-zstep">Depth step</label><div class="inp"><input id="s-zstep" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
+      <div class="field"><label>&nbsp;</label><button id="btn-q-from-p3" type="button">Use P3 footing</button></div>
+    </div>
+    <div id="p4-msg"></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>Δσ<sub>z</sub> vs depth</h2><div class="chart-box tall"><canvas id="st-chart"></canvas></div></div>
+    <div class="card"><h2>Values</h2>
+      <div class="tbl-wrap" style="max-height:420px;overflow-y:auto"><table>
+        <thead><tr><th>z<small>m</small></th><th>Boussinesq centre<small>kPa</small></th><th>Boussinesq corner<small>kPa</small></th><th>2:1 method<small>kPa</small></th></tr></thead>
+        <tbody id="st-body"></tbody>
+      </table></div>
+      <p class="note">The corner curve is the stress under one corner of the B × L rectangle (B × B for circular footings). The centre curve follows the selected shape.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ P5 ============ -->
+<section id="p5" class="panel">
+  <div class="card">
+    <h2>Settlement inputs</h2>
+    <p class="note">Footing geometry, water table and base-soil γ come from P3. Net pressure defaults to V/A from P3 minus the total overburden σ<sub>v0</sub> at D<sub>f</sub>; edit it freely.</p>
+    <div class="grid3">
+      <div class="field"><label for="t-q">Net pressure q<sub>net</sub></label><div class="inp"><input id="t-q" type="number" step="5" min="0"><span class="unit">kPa</span></div></div>
+      <div class="field"><label for="t-years">Time for creep (C₂)</label><div class="inp"><input id="t-years" type="number" step="0.1" min="0.1"><span class="unit">years</span></div></div>
+      <div class="field"><label for="t-unit">Plot time unit</label><select id="t-unit"><option value="days">days</option><option value="years">years</option></select></div>
+      <div class="field"><label>Drainage</label><div class="seg" role="group"><button id="drain-single" type="button" aria-pressed="false">Single</button><button id="drain-double" type="button" aria-pressed="true">Double</button></div></div>
+      <div class="field"><label>&nbsp;</label><button id="btn-q-reset" type="button">Reset q<sub>net</sub> from P3</button></div>
+    </div>
+    <div id="p5-msg"></div>
+  </div>
+  <div id="p5-kpis" class="kpis"></div>
+  <div class="card">
+    <h2>Schmertmann (1978) granular settlement</h2>
+    <div class="result" id="p5-schm"></div>
+    <div class="tbl-wrap" style="margin-top:10px"><table>
+      <thead><tr><th class="l">Layer<small>#</small></th><th>z from base<small>m</small></th><th>dz<small>m</small></th><th>I<sub>z</sub><small>–</small></th><th>E<sub>s</sub><small>kPa</small></th><th>S<small>mm</small></th></tr></thead>
+      <tbody id="p5-schm-body"></tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <h2>1D consolidation sublayers (≤ 0.5 m)</h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th class="l">Layer<small>#</small></th><th>z<sub>mid</sub><small>m</small></th><th>dz<small>m</small></th><th>σ′<sub>v0</sub><small>kPa</small></th><th>Δσ<sub>z</sub><small>kPa</small></th><th>σ′<sub>v0</sub>+Δσ<small>kPa</small></th><th class="l">Case</th><th>S<sub>c</sub><small>mm</small></th></tr></thead>
+      <tbody id="p5-con-body"></tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <h2>Time–settlement curve</h2>
+    <div class="chart-box tall"><canvas id="ts-chart"></canvas></div>
+    <div id="p5-curve-note" class="note"></div>
+  </div>
+</section>
+
+<details class="src">
+  <summary>Equation sources and IS codes</summary>
+  <ul>
+    <li><b>Effective stress</b>: Terzaghi's principle, <code>σ′v0 = σv0 − u</code>, with γ<sub>moist</sub> above and γ<sub>sat</sub> below the water table, u = γ<sub>w</sub>(z − z<sub>w</sub>).</li>
+    <li><b>SPT overburden correction</b>: IS 2131:1981 Cl. 3.6.1 and Fig. 1 (Peck-Hanson-Thornburn), <code>C<sub>N</sub> = 0.77 log₁₀(2000/σ′v0)</code>, limited to 0.40 ≤ C<sub>N</sub> ≤ 2.0; <code>N′ = C<sub>N</sub>·N</code>.</li>
+    <li><b>SPT dilatancy correction</b>: IS 2131:1981 Cl. 3.6.2, <code>N″ = 15 + 0.5(N′ − 15)</code> for fine sand or silt below the water table with N′ &gt; 15.</li>
+    <li><b>φ′ from SPT</b>: Meyerhof (1956), Peck et al. (1974); approximate check only.</li>
+    <li><b>Direct shear</b>: ordinary least squares fit of <code>τ = c′ + σn tan φ′</code>; Lambe &amp; Whitman (1969); test procedure IS 2720 (Part 13):1986.</li>
+    <li><b>Bearing capacity</b>: IS 6403:1981 Cl. 5.1.2, <code>q<sub>nu</sub> = c N<sub>c</sub> s<sub>c</sub> d<sub>c</sub> i<sub>c</sub> + q(N<sub>q</sub> − 1) s<sub>q</sub> d<sub>q</sub> i<sub>q</sub> + 0.5 γ B′ N<sub>γ</sub> s<sub>γ</sub> d<sub>γ</sub> i<sub>γ</sub> W′</code>; q<sub>ns</sub> = q<sub>nu</sub>/FoS; q<sub>s</sub> = q<sub>ns</sub> + q. Water table factor W′ per Cl. 5.1.2.2; local shear c<sub>m</sub> = ⅔c′, tan φ<sub>m</sub> = ⅔ tan φ′.</li>
+    <li><b>Vertical stress under a rectangle</b>: Newmark (1935) corner solution; Das (2010) <i>Principles of Foundation Engineering</i>, Eq. 10.15. Centre = 4 × corner of B/2 × L/2.</li>
+    <li><b>Circular and strip</b>: Boussinesq (1885); Das (2010) Eq. 10.19; Poulos &amp; Davis (1974).</li>
+    <li><b>2:1 method</b>: Terzaghi &amp; Peck (1967); Bowles (1996), <code>Δσz = qBL/((B+z)(L+z))</code>.</li>
+    <li><b>Granular settlement</b>: Schmertmann et al. (1978), <code>S = C₁C₂ Δq Σ(I<sub>z</sub>/E<sub>s</sub>)Δz</code>, C₁ = 1 − 0.5(σ′v0/Δq) ≥ 0.5, C₂ = 1 + 0.2 log₁₀(t/0.1).</li>
+    <li><b>Clay consolidation</b>: <code>S = C/(1+e₀) · H · log₁₀(σ′f/σ′v0)</code> with C<sub>c</sub> (NC) or C<sub>r</sub> (OC), split at σ′<sub>p</sub> when crossing; sublayers ≤ 0.5 m.</li>
+    <li><b>Time rate</b>: Terzaghi 1D theory, T<sub>v</sub> = c<sub>v</sub>t/H<sub>dr</sub>²; U = √(4T<sub>v</sub>/π) for U ≤ 60 %, otherwise T<sub>v</sub> = 1.781 − 0.933 log₁₀(100 − U%). H<sub>dr</sub> = H (single) or H/2 (double).</li>
+  </ul>
+</details>
+</main>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
