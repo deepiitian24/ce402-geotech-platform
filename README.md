@@ -117,16 +117,15 @@ All tests use Node.js built-in `node:test` + `node:assert/strict` — no externa
 - IS 6403 / IS 2131 only — no AASHTO, Eurocode, or other standards yet
 
 ---
-
 ## 👥 Team & Live Deployment
-
-| # | Member name (placeholder) | Role |
-|---|---------------------------|------|
-| 1 | [Member 1] | |
-| 2 | [Member 2] | |
-| 3 | [Member 3] | |
-| 4 | [Member 4] | |
-| 5 | [Member 5] | |
+| # | Member Name | Role |
+|---|-------------|------|
+| 1 | Prakash Deep | Project Lead, Shared Data Models (`models.js`), P1 Soil Profile (`soilProfile.js`), Web UI & Plots (`index.html`, `styles.css`, `app.js`), AI Audit & Log, and Deployment |
+| 2 | Prayag Lakwad | P2 Parameter Tools (`spt.js` — IS 2131:1981 SPT corrections & Direct Shear OLS) and P4 Stress Increase (`stress.js` — Boussinesq & 2:1 method) |
+| 3 | Sagar Singh | P3 Bearing Capacity (`bearingCapacity.js` — IS 6403:1981 factors, shear modes, eccentricity & groundwater factor $W'$) |
+| 4 | Krishna Kaushik Reddy | P5 Settlement (`settlement.js` — Schmertmann 1978 granular settlement, $\le 0.5\text{ m}$ 1D clay consolidation & time–settlement curves) |
+| 5 | Ram Anutej Reddy | Automated Verification & Unit Tests for Models, P1, and P2 (`tests/test_p1_p2.test.js`) |
+| 6 | Rahul Kumar | Automated Verification & Unit Tests for P3, P4, and P5 (`tests/test_p3_p4_p5.test.js`) |
 
 **Live deployment (GitHub Pages):** `https://<username>.github.io/<repo>/` — replace with the actual URL after enabling Pages in the repository settings.
 
