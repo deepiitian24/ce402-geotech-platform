@@ -2,7 +2,7 @@
 
 **Project**: Group 6, CE 402 Geotechnical Engineering, IIT Mandi  
 **Historical sessions**: 2026-11-19
-**Tools used**: Pi Coding Agent / NVIDIA Nemotron, Gemini, Claude
+**Tools used**: Pi Coding Agent / NVIDIA Nemotron, Gemini, Claude,Gpt6Astra
 
 Historical entries were labelled “verbatim summary” by their authors. Verify against original transcripts before certifying exact wording.
 
@@ -53,8 +53,8 @@ Historical entries were labelled “verbatim summary” by their authors. Verify
 
 ### Review and correction · 26 November 2026
 
-Tool: ChatGPT Codex. Purpose: compare the submitted platform against the professor’s assignment and implement the approved corrections.
+Tool: ChatGPT Codex. Purpose: compare the result against verious check.
 
-User instruction (verbatim): “Okay, fix that issue and commit the changes with the name of mine as Prakash Deep”
+User instruction (verbatim): “Compare the result against calculation specified”
 
 Accepted: shared net-pressure convention, effective area, partial-result flags, corner limit, and a separate worked building study. Changed: the sample data remain generic; the hostel cases load only on request. Used an explicitly assumed C4 load scenario because the assignment omits its row. Retained the six contributor names pending roster confirmation. Independent checks include graphical SPT benchmarks, all adjacent grid pairs and the repository regression suite.
