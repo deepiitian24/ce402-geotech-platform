@@ -10,7 +10,7 @@ import {
   computeLayerMidDepthStresses, getLayerAtDepth
 } from './soilProfile.js';
 import { correctSPT_N_Batch, directShearOLS, estimatePhiFromSPT } from './spt.js';
-import { computeBearingCapacityIS6403, computeAllowableLoad } from './bearingCapacity.js';
+import { computeBearingCapacityIS6403, computeEffectiveDimensions } from './bearingCapacity.js';
 import { generateStressProfile } from './stress.js';
 import {
   computeTotalSettlement, generateTimeSettlementCurve, schmertmannIz
@@ -51,7 +51,7 @@ const state = {
   spt: [],
   ds: [],
   calc: { depth: '3', wt: 'design' },
-  f: { shape: 'strip', B: '', L: '1', Df: '', V: '', H: '0', Mx: '0', My: '0', fos: '3', mode: 'auto', wt: 'design', gamma: '', c: '', phi: '', manual: false },
+  f: { shape: 'strip', B: '', L: '1', Df: '', V: '', H: '0', Mx: '0', My: '0', fos: '3', mode: 'local', wt: 'design', gamma: '', c: '', phi: '', manual: false },
   st: { q: '', shape: 'square', B: '', L: '', zmax: '10', zstep: '0.5' },
   t: { q: '', years: '0.1', unit: 'days', drainage: 'double', qDirty: false }
 };
@@ -75,7 +75,7 @@ function sampleData() {
       { depth: 7, N: 28, coh: true, fine: true }, { depth: 9, N: 32, coh: true, fine: true }
     ],
     ds: [{ sn: 50, tf: 31 }, { sn: 100, tf: 49 }, { sn: 150, tf: 72 }, { sn: 200, tf: 90 }],
-    f: { shape: 'square', B: '2', L: '2', Df: '1.5', V: '800', H: '0', Mx: '0', My: '0', fos: '3', mode: 'auto', wt: 'design', gamma: '', c: '', phi: '', manual: false },
+    f: { shape: 'square', B: '2', L: '2', Df: '1.5', V: '800', H: '0', Mx: '0', My: '0', fos: '3', mode: 'local', wt: 'design', gamma: '', c: '', phi: '', manual: false },
     st: { q: '200', shape: 'square', B: '2', L: '2', zmax: '10', zstep: '0.5' },
     t: { q: '', years: '0.1', unit: 'days', drainage: 'double', qDirty: false }
   };
@@ -264,9 +264,15 @@ function bindStatic() {
   $('btn-q-from-p3').addEventListener('click', () => {
     const { footing } = getFooting();
     if (!footing) { showMsgs($('p4-msg'), ['Complete the P3 footing inputs first.'], 'warn'); return; }
-    state.st.shape = footing.shape; state.st.B = String(footing.B_m); state.st.L = String(footing.L_m);
-    const q = grossPressure(footing);
-    state.st.q = fmt(q, 1);
+    const { profile } = getProfile();
+    if (!profile) { showMsgs($('p4-msg'), ['Complete the P1 profile first.'], 'warn'); return; }
+    try {
+      const { net, footprint } = serviceDemand(footing, profile);
+      state.st.shape = footprint.shape;
+      state.st.B = String(footprint.B_m);
+      state.st.L = String(footprint.L_m);
+      state.st.q = String(net);
+    } catch (err) { showMsgs($('p4-msg'), [err.message]); return; }
     syncInputs(); recompute();
   });
   $('btn-q-reset').addEventListener('click', () => { state.t.qDirty = false; recompute(); });
@@ -448,7 +454,7 @@ function renderP1() {
     σ<sub>v0</sub> (total) = <b>${fmt(total)} kPa</b><br>u (pore pressure) = <b>${fmt(u)} kPa</b><br>
     σ′<sub>v0</sub> = σ<sub>v0</sub> − u = <b>${fmt(eff)} kPa</b>
     ${lay ? `<br>Layer at z: <b>${profile.layers.indexOf(lay) + 1} (${esc(cap(lay.soilType))})</b>` : ''}
-    ${z > D ? `<div class="msg warn">Depth is below the last layer (${fmt(D)} m); stress only counts soil defined in the profile.</div>` : ''}`;
+    ${z > D ? `<div class="msg warn">Depth is below the last layer (${fmt(D)} m); stress extrapolates the final layer to the requested depth.</div>` : ''}`;
 }
 
 // ============================================================================
@@ -479,7 +485,7 @@ function renderP2() {
     o('why').textContent = res.isCohesionless ? res.dilatancyReason : 'Cohesive soil: no corrections';
     o('phi').textContent = res.isCohesionless ? fmt(estimatePhiFromSPT(res.N_corrected, r.fine ? 'silt' : 'sand'), 0) : '–';
   });
-  if (profile && state.spt.length) warn.push('* C_N limited to the 0.40 to 2.0 range of IS 2131:1981.');
+  if (profile && state.spt.length) warn.push('* C_N limited to the plotted 0.40–2.0 range; logarithmic approximation to Fig. 1.');
   if (warn.length) msg.innerHTML += warn.map((w) => `<div class="msg warn">${esc(w)}</div>`).join('');
 
   renderDirectShear();
@@ -529,9 +535,13 @@ function dsChartConfig(pts, res) {
 // ============================================================================
 // P3: BEARING CAPACITY
 // ============================================================================
-function grossPressure(footing) {
-  const A = footing.shape === 'circular' ? Math.PI * footing.B_m * footing.B_m / 4 : footing.B_m * footing.L_m;
-  return footing.loadV_kN / A;
+// Effective-area approximation for eccentric loads (IS 6403, clause 4).
+function serviceDemand(footing, profile) {
+  const dims = computeEffectiveDimensions(footing);
+  const gross = footing.loadV_kN / dims.A_prime_m2;
+  const removed = computeTotalVerticalStress(profile, footing.Df_m, state.f.wt);
+  const shape = footing.shape === 'square' && dims.B_prime_m !== dims.L_prime_m ? 'rectangular' : footing.shape;
+  return { gross, net: gross - removed, footprint: { ...footing, shape, B_m: dims.B_prime_m, L_m: dims.L_prime_m } };
 }
 
 function autofillBaseSoil(profile) {
@@ -571,20 +581,23 @@ function renderP3() {
   if (problems.length) { showMsgs(msg, problems, 'warn'); kp.innerHTML = ''; tb.innerHTML = ''; return; }
 
   const r = computeBearingCapacityIS6403({ footing, profile, gamma_kNm3: gamma, cPrime_kPa: c, phiDeg: phi, shearMode: state.f.mode, wtSource: state.f.wt });
-  const Qall = computeAllowableLoad({ qns_kPa: r.qns_kPa, A_prime_m2: r.A_prime_m2 });
+  const demand = serviceDemand(footing, profile);
   const items = [];
-  if (r.eB_m >= footing.B_m / 3 || r.eL_m >= footing.L_m / 3) items.push(['warn', 'Eccentricity exceeds B/3 or L/3; check that the resultant stays within the middle third.']);
-  if (footing.B_m - 2 * r.eB_m <= 0.01) items.push(['warn', 'Eccentricity is so large that B′ collapsed to the 0.01 m floor.']);
-  if (footing.shape === 'strip') items.push(['warn', `Strip footing: V and the allowable load are for the length L = ${fmt(footing.L_m)} m.`]);
-  items.push(footing.loadV_kN <= Qall
-    ? ['ok', `Applied V = ${fmt(footing.loadV_kN, 1)} kN is within the allowable load of ${fmt(Qall, 1)} kN.`]
-    : ['err', `Applied V = ${fmt(footing.loadV_kN, 1)} kN exceeds the allowable load of ${fmt(Qall, 1)} kN.`]);
+  // Elastic full-contact pressure at the least compressed corner: qmin/qavg = 1 - 6ex/B - 6ey/L.
+  const kernRatio = footing.shape === 'circular'
+    ? 8 * Math.hypot(r.eB_m, r.eL_m) / footing.B_m
+    : 6 * (r.eB_m / footing.B_m + r.eL_m / footing.L_m);
+  if (kernRatio > 1) items.push(['warn', 'Resultant outside the kern. Full contact is lost; verify the compressed contact area.']);
+  if (state.f.mode === 'auto') items.push(['warn', 'Legacy friction-angle heuristic. Select general or local shear using site evidence (IS 6403 Table 3 for sands).']);
+  items.push(demand.net <= r.qns_kPa
+    ? ['ok', 'Net service pressure is within net safe bearing capacity.']
+    : ['err', 'Net service pressure exceeds net safe bearing capacity.']);
   msg.innerHTML = items.map(([k, t]) => `<div class="msg ${k}">${esc(t)}</div>`).join('');
 
   kp.innerHTML = kpi('Net ultimate bearing capacity q<sub>nu</sub>', fmt(r.qnu_kPa, 1), 'kPa')
     + kpi('Net safe bearing capacity q<sub>ns</sub> = q<sub>nu</sub>/FoS', fmt(r.qns_kPa, 1), 'kPa')
-    + kpi('Safe bearing pressure q<sub>s</sub> = q<sub>ns</sub> + q', fmt(r.qs_kPa, 1), 'kPa', true)
-    + kpi('Allowable load Q = q<sub>ns</sub> × A′', fmt(Qall, 1), 'kN', true);
+    + kpi('Gross service pressure V/A′', fmt(demand.gross, 1), 'kPa')
+    + kpi('Net service pressure after excavation relief', fmt(demand.net, 1), 'kPa', true);
 
   const R = (name, sym, v, unit, note = '', d = 3) => `<tr><td class="l">${name}</td><td class="l">${sym}</td><td class="num">${typeof v === 'number' ? fmt(v, d) : esc(v)}</td><td class="num">${unit}</td><td class="l">${esc(note)}</td></tr>`;
   tb.innerHTML = [
@@ -663,7 +676,7 @@ function renderP5() {
   if (problems.length) { showMsgs(msg, problems, 'warn'); reset(); return; }
 
   // Net pressure default from P3 footing (total overburden removed at D_f)
-  const autoQ = grossPressure(footing) - computeTotalVerticalStress(profile, footing.Df_m, state.f.wt);
+  const { net: autoQ, footprint } = serviceDemand(footing, profile);
   if (!state.t.qDirty) { state.t.q = fmt(Math.max(0, autoQ), 2); $('t-q').value = state.t.q; }
   const qNet = num(state.t.q); const years = num(state.t.years);
   const errs = [];
@@ -673,23 +686,24 @@ function renderP5() {
 
   const gamma = num(state.f.gamma) ?? 0;
   const res = computeTotalSettlement({
-    profile, footing, q_net_kPa: qNet, gamma_kNm3: gamma, delta_sigma_at_layer_mid_kPa: [],
+    profile, footing: footprint, q_net_kPa: qNet, gamma_kNm3: gamma, delta_sigma_at_layer_mid_kPa: [],
     time_years: years, wtSource: state.f.wt, max_sublayer_thickness_m: 0.5,
     drainage: state.t.drainage
   });
   const notes = [];
   const g = res.granular;
   const hasGran = g.sublayers.length > 0;
+  for (const i of g.missingStiffness ?? []) notes.push('Layer ' + (i + 1) + ': missing granular stiffness. Settlement excludes this layer.');
   if (!hasGran) notes.push('No sand or gravel layer with E_s inside the Schmertmann influence depth; immediate settlement is zero.');
   res.consolidation.layerResults.forEach((lr) => { if (lr.note === 'Missing consolidation parameters') notes.push(`Layer ${lr.layerIndex + 1}: e₀, C_c, C_r and σ′_p are all needed for consolidation settlement.`); });
   showMsgs(msg, notes, 'warn');
 
   kp.innerHTML = kpi('Immediate (granular) S<sub>imm</sub>', fmt(res.S_immediate_mm, 1), 'mm')
     + kpi('Consolidation S<sub>c</sub>', fmt(res.S_consolidation_mm, 1), 'mm')
-    + kpi('Total settlement', fmt(res.S_total_mm, 1), 'mm', true);
+    + kpi(res.complete ? 'Total settlement' : 'Partial settlement (incomplete inputs)', fmt(res.S_total_mm, 1), 'mm', true);
 
   let izPeak;
-  if (hasGran) izPeak = schmertmannIz({ z_m: g.z_peak_m, B_m: footing.B_m, L_m: footing.L_m, q_net_kPa: qNet, sigma_vp_prime_kPa: g.sigma_vp_prime_kPa, shape: footing.shape });
+  if (hasGran) izPeak = schmertmannIz({ z_m: g.z_peak_m, B_m: footprint.B_m, L_m: footprint.L_m, q_net_kPa: qNet, sigma_vp_prime_kPa: g.sigma_vp_prime_kPa, shape: footprint.shape });
   $('p5-schm').innerHTML = hasGran
     ? `C<sub>1</sub> = <b>${fmt(g.C1, 3)}</b> (–) &nbsp; C<sub>2</sub> = <b>${fmt(g.C2, 3)}</b> (–) &nbsp; I<sub>z,peak</sub> = <b>${fmt(izPeak, 3)}</b> (–)<br>
        z<sub>peak</sub> = <b>${fmt(g.z_peak_m)} m</b> &nbsp; influence depth = <b>${fmt(g.z_influence_m)} m</b> &nbsp; σ′<sub>vp</sub> = <b>${fmt(g.sigma_vp_prime_kPa)} kPa</b><br>
@@ -758,6 +772,8 @@ function recompute() {
     else if (activeTab === 'p4') renderP4();
     else if (activeTab === 'p5') renderP5();
   } catch (err) {
+    if (activeTab === 'p3') { $('p3-kpis').innerHTML = ''; clearTbody('p3-factors'); $('p3-msg').textContent = err.message; }
+    if (activeTab === 'p5') { $('p5-kpis').innerHTML = ''; $('p5-schm').innerHTML = ''; clearTbody('p5-schm-body'); clearTbody('p5-con-body'); charts.ts?.destroy(); delete charts.ts; $('p5-curve-note').textContent = ''; $('p5-msg').textContent = err.message; }
     console.error(err);
     showMsgs($('global-msg'), [`Calculation error: ${err.message}`]);
   }
@@ -771,4 +787,15 @@ function init() {
   recompute();
 }
 
-if (typeof document !== 'undefined') init();
+if (typeof document !== 'undefined') {
+  init();
+  const name = new URLSearchParams(window.location.search).get('column');
+  if (name) {
+    const { analyzeHostel, calculatorInput } = await import('../examples/hostel.js');
+    const column = analyzeHostel().columns.find(c => c.name === name);
+    if (column) {
+      loadState(calculatorInput(column));
+      showMsgs($('global-msg'), ['Group 6 ' + name + ' · ' + column.id + (name === 'C4' ? ' · provisional axial load and moment' : '')], 'ok');
+    }
+  }
+}

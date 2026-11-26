@@ -106,7 +106,7 @@ function getEffectiveShearParameters(phiDeg, cPrime_kPa, shearMode = 'auto') {
       phi_eff_deg = phi_m_deg;
     } else if (phiDeg > 29 && phiDeg < 36 && isCohesionless) {
       // Intermediate shear: linear interpolation between general and local
-      // per IS 6403:1981 Clause 5.1.2
+      // Legacy angle-based heuristic for older saved cases
       shearModeUsed = 'intermediate';
       isIntermediate = true;
       const { c_m_kPa, phi_m_deg } = getLocalShearParameters(cPrime_kPa, phiDeg);
@@ -124,11 +124,11 @@ function getEffectiveShearParameters(phiDeg, cPrime_kPa, shearMode = 'auto') {
 }
 
 // ============================================================================
-// SHAPE FACTORS (IS 6403:1981 Clause 5.1.2.1, Table 1)
+// SHAPE FACTORS (IS 6403:1981 Clause 5.1.2.1, Table 2)
 // ============================================================================
 
 /**
- * Shape factors sc, sq, sγ per IS 6403:1981 Clause 5.1.2.1 Table 1
+ * Shape factors sc, sq, sγ per IS 6403:1981 Clause 5.1.2.1 Table 2
  *
  * Strip:    sc = 1.0, sq = 1.0, sγ = 1.0
  * Square:   sc = 1.3, sq = 1.2, sγ = 0.8
@@ -138,7 +138,7 @@ function getEffectiveShearParameters(phiDeg, cPrime_kPa, shearMode = 'auto') {
  *   sq = 1 + 0.2 * (B/L)
  *   sγ = 1 - 0.4 * (B/L)
  *
- * Source: IS 6403:1981, Clause 5.1.2.1, Table 1
+ * Source: IS 6403:1981, Clause 5.1.2.1, Table 2
  *
  * @param {Object} params
  * @param {number} params.B_m - Width (m)
@@ -161,7 +161,7 @@ function computeShapeFactors({ B_m, L_m, shape }) {
 
   // Rectangular: ensure B/L <= 1.0
   const B_over_L = Math.min(B_m / L_m, 1.0);
-  // Source: IS 6403:1981, Clause 5.1.2.1, Table 1
+  // Source: IS 6403:1981, Clause 5.1.2.1, Table 2
   const sc = 1 + 0.2 * B_over_L;
   const sq = 1 + 0.2 * B_over_L;
   const sgamma = 1 - 0.4 * B_over_L;
@@ -170,18 +170,18 @@ function computeShapeFactors({ B_m, L_m, shape }) {
 }
 
 // ============================================================================
-// DEPTH FACTORS (IS 6403:1981 Clause 5.1.2.1)
+// DEPTH FACTORS (IS 6403:1981 Clause 5.1.2.2)
 // ============================================================================
 
 /**
- * Depth factors dc, dq, dγ per IS 6403:1981 Clause 5.1.2.1
+ * Depth factors dc, dq, dγ per IS 6403:1981 Clause 5.1.2.2
  *
  * N_φ = tan²(45° + φ/2)
  * dc = 1 + 0.2 * (Df/B) * √N_φ
  * dq = dγ = 1.0 for φ < 10°
  * dq = dγ = 1 + 0.1 * (Df/B) * √N_φ for φ ≥ 10°
  *
- * Source: IS 6403:1981, Clause 5.1.2.1
+ * Source: IS 6403:1981, Clause 5.1.2.2
  *
  * @param {Object} params
  * @param {number} params.Df_m - Embedment depth (m)
@@ -217,17 +217,17 @@ function computeDepthFactors({ Df_m, B_m, phi_eff_deg }) {
 }
 
 // ============================================================================
-// INCLINATION FACTORS (IS 6403:1981 Clause 5.1.2.1)
+// INCLINATION FACTORS (IS 6403:1981 Clause 5.1.2.3)
 // ============================================================================
 
 /**
- * Inclination factors ic, iq, iγ per IS 6403:1981 Clause 5.1.2.1
+ * Inclination factors ic, iq, iγ per IS 6403:1981 Clause 5.1.2.3
  *
  * α = arctan(H/V) in degrees
  * ic = iq = (1 - α/90)²
  * iγ = (1 - α/φ)² for φ > 0, else 1.0
  *
- * Source: IS 6403:1981, Clause 5.1.2.1
+ * Source: IS 6403:1981, Clause 5.1.2.3
  *
  * @param {Object} params
  * @param {number} params.loadV_kN - Vertical load (kN)
@@ -259,11 +259,11 @@ function computeInclinationFactors({ loadV_kN, loadH_kN, phi_eff_deg }) {
 }
 
 // ============================================================================
-// WATER TABLE FACTOR W' (IS 6403:1981 Clause 5.1.2)
+// WATER TABLE FACTOR W' (IS 6403:1981 Clause 5.1.2.4)
 // ============================================================================
 
 /**
- * Water table correction factor W' per IS 6403:1981 Clause 5.1.2
+ * Water table correction factor W' per IS 6403:1981 Clause 5.1.2.4
  *
  * W' = 0.5 + 0.5 * (Dw / B)  for 0 <= Dw <= B
  * W' = 1.0                    for Dw >= B
@@ -271,7 +271,7 @@ function computeInclinationFactors({ loadV_kN, loadH_kN, phi_eff_deg }) {
  *
  * Where Dw = depth of water table below footing base
  *
- * Source: IS 6403:1981, Clause 5.1.2
+ * Source: IS 6403:1981, Clause 5.1.2.4
  *
  * @param {number} Dw_m - Depth of water table below footing base (m)
  * @param {number} B_m - Footing width (m)
@@ -426,21 +426,21 @@ function computeBearingCapacityIS6403({
     loadV_kN: footing.loadV_kN
   });
 
-  // 4. Shape factors (IS 6403:1981 Clause 5.1.2.1 Table 1)
+  // 4. Shape factors (IS 6403:1981 Clause 5.1.2.1 Table 2)
   const { sc, sq, sgamma } = computeShapeFactors({
     B_m: B_prime_m,
     L_m: L_prime_m,
     shape: footing.shape
   });
 
-  // 5. Depth factors (IS 6403:1981 Clause 5.1.2.1)
+  // 5. Depth factors (IS 6403:1981 Clause 5.1.2.2)
   const { dc, dq, dgamma } = computeDepthFactors({
     Df_m: footing.Df_m,
     B_m: B_prime_m,
     phi_eff_deg
   });
 
-  // 6. Inclination factors (IS 6403:1981 Clause 5.1.2.1)
+  // 6. Inclination factors (IS 6403:1981 Clause 5.1.2.3)
   const { ic, iq, igamma } = computeInclinationFactors({
     loadV_kN: footing.loadV_kN,
     loadH_kN,

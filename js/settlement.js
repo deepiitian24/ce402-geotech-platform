@@ -464,6 +464,7 @@ function computeSchmertmannSettlement({
   // Source: Schmertmann et al. (1978)
   const C2 = Math.max(1.0, 1 + 0.2 * Math.log10(Math.max(0.1, time_years) / 0.1));
 
+  const missingStiffness = [];
   // Process sand layers within influence depth
   let total_S_m = 0;
   const sublayers = [];
@@ -475,7 +476,10 @@ function computeSchmertmannSettlement({
     const layerBottom = Math.min(layer.bottomDepth_m, Df_m + z_influence);
 
     if (layerTop >= layerBottom) return;
-    if (layer.Es_kPa === undefined || layer.Es_kPa <= 0) return;
+    if (!(layer.Es_kPa > 0)) {
+      missingStiffness.push(layerIndex);
+      return;
+    }
 
     const layerThickness = layerBottom - layerTop;
     const n_sublayers = Math.ceil(layerThickness / max_sublayer_thickness_m);
@@ -520,6 +524,7 @@ function computeSchmertmannSettlement({
     C1,
     C2,
     sigma_vp_prime_kPa,
+    missingStiffness,
     z_peak_m: z_peak,
     z_influence_m: z_influence,
     sublayers
@@ -601,7 +606,11 @@ function computeTotalSettlement({
     }
   });
 
+  const complete = !(granular.missingStiffness?.length) && !consolidation.layerResults.some(
+    row => row.note === 'Missing consolidation parameters' && profile.layers[row.layerIndex].bottomDepth_m > footing.Df_m
+  );
   return {
+    complete,
     S_immediate_m: granular.S_m,
     S_immediate_mm: granular.S_mm,
     S_consolidation_m: consolidation.S_m,

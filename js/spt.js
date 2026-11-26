@@ -12,7 +12,7 @@ import { computeEffectiveVerticalStress } from './soilProfile.js';
 // ============================================================================
 
 /**
- * Overburden correction factor CN per IS 2131:1981 Clause 3.6.1 & Fig. 1 (Peck-Hanson-Thornburn)
+ * Logarithmic approximation to the overburden correction chart in IS 2131:1981 Clause 3.6.1 & Fig. 1 (Peck-Hanson-Thornburn)
  * CN = 0.77 * log10(2000 / σ'v0) where σ'v0 in kPa
  * Clamped to 0.40 <= CN <= 2.0
  *
@@ -30,7 +30,7 @@ export function computeOverburdenCorrectionCN(sigmaV0Prime_kPa) {
   // Source: IS 2131:1981, Clause 3.6.1 & Fig. 1 (Peck-Hanson-Thornburn)
   const CN_raw = 0.77 * Math.log10(2000 / sigmaV0Prime_kPa);
 
-  // Clamp to [0.40, 2.0] per IS 2131:1981
+  // Numerical guard at the horizontal limits of the IS 2131 Fig. 1 chart.
   let limited = false;
   let CN = CN_raw;
   if (CN_raw > 2.0) {

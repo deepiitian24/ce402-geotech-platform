@@ -596,8 +596,8 @@ describe('P3 - Allowable Load', () => {
 // ============================================================================
 
 describe('P4 - Boussinesq Corner', () => {
-  test('z = 0: Δσz = q', () => {
-    assert.equal(boussinesqCorner({ q_kPa: 100, B_m: 2, L_m: 3, z_m: 0 }), 100);
+  test('corner limit at z = 0 is one quarter of q', () => {
+    assert.equal(boussinesqCorner({ q_kPa: 100, B_m: 2, L_m: 3, z_m: 0 }), 25);
   });
 
   test('q = 0: Δσz = 0', () => {

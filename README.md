@@ -6,6 +6,10 @@ A pure client-side web platform for geotechnical foundation design calculations 
 
 ---
 
+[Open the calculator](https://deepiitian24.github.io/ce402-geotech-platform/) · [View the worked hostel design](https://deepiitian24.github.io/ce402-geotech-platform/examples/hostel.html)
+
+The worked study gives a 28-column trial, all 45 adjacent-bay checks, an RL-based section and an alternative foundation concept. C4 uses explicitly assumed axial load and moment. Rebuild the static report with `node examples/build-report.js`. Select a column in the schedule to import its values into the general calculator.
+
 ## 🚀 Quick Start
 
 ### Run Locally
@@ -26,7 +30,7 @@ Then open: **http://127.0.0.1:8000**
 npm test
 ```
 
-Runs `node --test` over `tests/test_p1_p2.test.js` and `tests/test_p3_p4_p5.test.js` using the built-in `node:test` + `node:assert/strict` — no external test runner. All **173 tests** must pass.
+Runs `node --test` over `tests/test_p1_p2.test.js` and `tests/test_p3_p4_p5.test.js` using the built-in `node:test` + `node:assert/strict` — no external test runner. Run the full test suite before submission.
 
 ### Deploy via GitHub Pages
 
@@ -83,7 +87,7 @@ ce402-geotech-platform/
 
 ```bash
 npm test
-# 173 tests, 41 suites, 0 failures
+# Includes engine, integration and Group 6 case regressions
 # Wave 1: models / P1 / P2
 # Wave 2: P3 / P4 / P5 + integration
 ```
@@ -127,7 +131,9 @@ All tests use Node.js built-in `node:test` + `node:assert/strict` — no externa
 | 5 | Ram Anutej Reddy | Automated Verification & Unit Tests for Models, P1, and P2 (`tests/test_p1_p2.test.js`) |
 | 6 | Rahul Kumar | Automated Verification & Unit Tests for P3, P4, and P5 (`tests/test_p3_p4_p5.test.js`) |
 
-**Live deployment (GitHub Pages):** `https://<username>.github.io/<repo>/` — replace with the actual URL after enabling Pages in the repository settings.
+The assignment specifies four to five members. Six contributors are recorded above. Confirm the official group roster or an approved exception with the instructor.
+
+**Live deployment (GitHub Pages):** `https://deepiitian24.github.io/ce402-geotech-platform/`
 
 ---
 

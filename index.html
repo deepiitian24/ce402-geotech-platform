@@ -34,6 +34,7 @@
 </header>
 
 <main class="wrap">
+<p><a href="examples/hostel.html">View Group 6 hostel design and footing schedule</a></p>
 <div id="global-msg"></div>
 
 <!-- ============ P1 ============ -->
@@ -127,14 +128,15 @@
       <div class="field"><label for="f-B">Width / diameter B</label><div class="inp"><input id="f-B" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
       <div class="field"><label for="f-L">Length L</label><div class="inp"><input id="f-L" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
       <div class="field"><label for="f-Df">Embedment D<sub>f</sub></label><div class="inp"><input id="f-Df" type="number" step="0.1" min="0"><span class="unit">m</span></div></div>
-      <div class="field"><label for="f-V">Vertical load V</label><div class="inp"><input id="f-V" type="number" step="10" min="0"><span class="unit">kN</span></div></div>
+      <div class="field"><label for="f-V">Gross service load V (column + footing + backfill)</label><div class="inp"><input id="f-V" type="number" step="10" min="0"><span class="unit">kN</span></div></div>
       <div class="field"><label for="f-H">Horizontal load H</label><div class="inp"><input id="f-H" type="number" step="1" min="0"><span class="unit">kN</span></div></div>
       <div class="field"><label for="f-Mx">Moment M<sub>x</sub></label><div class="inp"><input id="f-Mx" type="number" step="1"><span class="unit">kNm</span></div></div>
       <div class="field"><label for="f-My">Moment M<sub>y</sub></label><div class="inp"><input id="f-My" type="number" step="1"><span class="unit">kNm</span></div></div>
       <div class="field"><label for="f-fos">Factor of safety</label><div class="inp"><input id="f-fos" type="number" step="0.1" min="1"><span class="unit">–</span></div></div>
-      <div class="field"><label for="f-mode">Shear mode</label><select id="f-mode"><option value="auto">Auto (by φ′)</option><option value="general">General shear</option><option value="local">Local shear</option></select></div>
+      <div class="field"><label for="f-mode">Shear mode</label><select id="f-mode"><option value="auto">Legacy estimate by φ′</option><option value="general">General shear</option><option value="local">Local shear</option></select></div>
       <div class="field"><label for="f-wt">Water table</label><select id="f-wt"><option value="design">Design WT</option><option value="measured">Measured WT</option></select></div>
     </div>
+    <p>For sands, use IS 6403 Table 3 and the density evidence to select shear mode. For intermediate density, bracket capacity with local and general shear. Enter the gross service resultant at founding level, including footing and backfill. Excavation relief uses total pre-excavation overburden.</p>
     <h3>Base soil (auto-filled from P1 at D<sub>f</sub>)</h3>
     <div class="grid3">
       <div class="field"><label for="f-gamma">γ below base</label><div class="inp"><input id="f-gamma" type="number" step="0.1" min="0"><span class="unit">kN/m³</span></div></div>
@@ -186,7 +188,7 @@
 <section id="p5" class="panel">
   <div class="card">
     <h2>Settlement inputs</h2>
-    <p class="note">Footing geometry, water table and base-soil γ come from P3. Net pressure defaults to V/A from P3 minus the total overburden σ<sub>v0</sub> at D<sub>f</sub>; edit it freely.</p>
+    <p class="note">Footing geometry, water table and base-soil γ come from P3. Net pressure defaults to V/A′ on the effective footprint from P3 minus the total overburden σ<sub>v0</sub> at D<sub>f</sub>; edit it freely.</p>
     <div class="grid3">
       <div class="field"><label for="t-q">Net pressure q<sub>net</sub></label><div class="inp"><input id="t-q" type="number" step="5" min="0"><span class="unit">kPa</span></div></div>
       <div class="field"><label for="t-years">Time for creep (C₂)</label><div class="inp"><input id="t-years" type="number" step="0.1" min="0.1"><span class="unit">years</span></div></div>
@@ -223,11 +225,11 @@
   <summary>Equation sources and IS codes</summary>
   <ul>
     <li><b>Effective stress</b>: Terzaghi's principle, <code>σ′v0 = σv0 − u</code>, with γ<sub>moist</sub> above and γ<sub>sat</sub> below the water table, u = γ<sub>w</sub>(z − z<sub>w</sub>).</li>
-    <li><b>SPT overburden correction</b>: IS 2131:1981 Cl. 3.6.1 and Fig. 1 (Peck-Hanson-Thornburn), <code>C<sub>N</sub> = 0.77 log₁₀(2000/σ′v0)</code>, limited to 0.40 ≤ C<sub>N</sub> ≤ 2.0; <code>N′ = C<sub>N</sub>·N</code>.</li>
+    <li><b>SPT overburden correction</b>: IS 2131:1981 Cl. 3.6.1 and Fig. 1, approximated by <code>C<sub>N</sub> = 0.77 log₁₀(2000/σ′v0)</code>, limited to 0.40 ≤ C<sub>N</sub> ≤ 2.0; <code>N′ = C<sub>N</sub>·N</code>.</li>
     <li><b>SPT dilatancy correction</b>: IS 2131:1981 Cl. 3.6.2, <code>N″ = 15 + 0.5(N′ − 15)</code> for fine sand or silt below the water table with N′ &gt; 15.</li>
     <li><b>φ′ from SPT</b>: Meyerhof (1956), Peck et al. (1974); approximate check only.</li>
     <li><b>Direct shear</b>: ordinary least squares fit of <code>τ = c′ + σn tan φ′</code>; Lambe &amp; Whitman (1969); test procedure IS 2720 (Part 13):1986.</li>
-    <li><b>Bearing capacity</b>: IS 6403:1981 Cl. 5.1.2, <code>q<sub>nu</sub> = c N<sub>c</sub> s<sub>c</sub> d<sub>c</sub> i<sub>c</sub> + q(N<sub>q</sub> − 1) s<sub>q</sub> d<sub>q</sub> i<sub>q</sub> + 0.5 γ B′ N<sub>γ</sub> s<sub>γ</sub> d<sub>γ</sub> i<sub>γ</sub> W′</code>; q<sub>ns</sub> = q<sub>nu</sub>/FoS; q<sub>s</sub> = q<sub>ns</sub> + q. Water table factor W′ per Cl. 5.1.2.2; local shear c<sub>m</sub> = ⅔c′, tan φ<sub>m</sub> = ⅔ tan φ′.</li>
+    <li><b>Bearing capacity</b>: IS 6403:1981 Cl. 5.1.2, <code>q<sub>nu</sub> = c N<sub>c</sub> s<sub>c</sub> d<sub>c</sub> i<sub>c</sub> + q(N<sub>q</sub> − 1) s<sub>q</sub> d<sub>q</sub> i<sub>q</sub> + 0.5 γ B′ N<sub>γ</sub> s<sub>γ</sub> d<sub>γ</sub> i<sub>γ</sub> W′</code>; q<sub>ns</sub> = q<sub>nu</sub>/FoS; q<sub>s</sub> = q<sub>ns</sub> + q. Water table factor W′ per Cl. 5.1.2.4; local shear c<sub>m</sub> = ⅔c′, tan φ<sub>m</sub> = ⅔ tan φ′.</li>
     <li><b>Vertical stress under a rectangle</b>: Newmark (1935) corner solution; Das (2010) <i>Principles of Foundation Engineering</i>, Eq. 10.15. Centre = 4 × corner of B/2 × L/2.</li>
     <li><b>Circular and strip</b>: Boussinesq (1885); Das (2010) Eq. 10.19; Poulos &amp; Davis (1974).</li>
     <li><b>2:1 method</b>: Terzaghi &amp; Peck (1967); Bowles (1996), <code>Δσz = qBL/((B+z)(L+z))</code>.</li>

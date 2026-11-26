@@ -70,7 +70,7 @@ Run `npm test` → **71 tests pass, 0 fail**.
 
 | # | Module | Bug Description | Fix Applied |
 |---|--------|----------------|-------------|
-| 1 | `js/bearingCapacity.js` | **Wrong IS 6403:1981 factors** — Shape factors used Vesic/Meyerhof formulas (sc=1+(B/L)(Nq/Nc), sq=1+(B/L)tanφ, sγ=1-0.4(B/L)) instead of **exact IS 6403:1981 Clause 5.1.2.1 Table 1** values (strip: 1/1/1; square: 1.3/1.2/0.8; circular: 1.3/1.2/0.6; rectangular: 1+0.2B/L, 1+0.2B/L, 1-0.4B/L). Depth factors used wrong formula (dq=1+2tanφ(1-sinφ)²Df/B) instead of **IS 6403 Clause 5.1.2.1** (N_φ=tan²(45+φ/2), dc=1+0.2(Df/B)√N_φ, dq=dγ=1 for φ<10° else 1+0.1(Df/B)√N_φ). Inclination factors used Meyerhof (ic=iq-(1-iq)/(Nc tanφ)) instead of **IS 6403 Clause 5.1.2.1** (α=atan(H/V), ic=iq=(1-α/90)², iγ=(1-α/φ)² for φ>0). Gross safe `qs` incorrectly computed as `qu/FoS` instead of `qns + q`. Negative moments increased effective dimensions. | Replaced all factors with exact IS 6403:1981 Clause 5.1.2.1 expressions. Fixed `qs = qns + q`. Used `Math.abs()` for moments. Circular `A' = π/4 × B'²`. |
+| 1 | `js/bearingCapacity.js` | **Wrong IS 6403:1981 factors** — Shape factors used Vesic/Meyerhof formulas (sc=1+(B/L)(Nq/Nc), sq=1+(B/L)tanφ, sγ=1-0.4(B/L)) instead of **exact IS 6403:1981 Clause 5.1.2.1 Table 2** values (strip: 1/1/1; square: 1.3/1.2/0.8; circular: 1.3/1.2/0.6; rectangular: 1+0.2B/L, 1+0.2B/L, 1-0.4B/L). Depth factors used wrong formula (dq=1+2tanφ(1-sinφ)²Df/B) instead of **IS 6403 Clause 5.1.2.1** (N_φ=tan²(45+φ/2), dc=1+0.2(Df/B)√N_φ, dq=dγ=1 for φ<10° else 1+0.1(Df/B)√N_φ). Inclination factors used Meyerhof (ic=iq-(1-iq)/(Nc tanφ)) instead of **IS 6403 Clause 5.1.2.1** (α=atan(H/V), ic=iq=(1-α/90)², iγ=(1-α/φ)² for φ>0). Gross safe `qs` incorrectly computed as `qu/FoS` instead of `qns + q`. Negative moments increased effective dimensions. | Replaced all factors with exact IS 6403:1981 Clause 5.1.2.1 expressions. Fixed `qs = qns + q`. Used `Math.abs()` for moments. Circular `A' = π/4 × B'²`. |
 | 2 | `js/settlement.js` | **Consolidation used constant σ'v0/Δσ per layer** — Each ≤0.5m sublayer must compute its OWN σ'v0 and Δσ at its mid-depth using profile and Boussinesq callback. **Schmertmann C1/C2 not clamped** — C1 can go negative (clamp to ≥0.5), C2 can go below 1.0 (clamp to ≥1.0). | Added optional `profile`, `wtSource`, `deltaSigmaFn` to `computeConsolidationSettlement`. Each sublayer calls `computeEffectiveVerticalStress(profile, z_mid)` and `deltaSigmaFn(z_mid)`. Updated `computeTotalConsolidationSettlement` to pass footing and q_net for Boussinesq callback. Added `Math.max(0.5, ...)` for C1 and `Math.max(1.0, ...)` for C2. |
 | 3 | `js/stress.js` | **Missing `boussinesq_corner` method** — `generateStressProfile` and `computeStressAtDepths` lacked support for corner stress method. | Added `'boussinesq_corner'` as supported method in both functions. |
 
@@ -78,7 +78,7 @@ Run `npm test` → **71 tests pass, 0 fail**.
 
 All 3 bugs have corresponding regression tests in `tests/test_p3_p4_p5.test.js`:
 
-- Bug 1: Tests for exact IS 6403 Table 1 shape factors, depth factors with N_φ, inclination factors with α, gross safe `qs = qns + q`, absolute moments, circular `A'`
+- Bug 1: Tests for exact IS 6403 Table 2 shape factors, depth factors with N_φ, inclination factors with α, gross safe `qs = qns + q`, absolute moments, circular `A'`
 - Bug 2: Tests for consolidation with profile/deltaSigmaFn callbacks, Schmertmann C1≥0.5 and C2≥1.0 clamping
 - Bug 3: Tests for `generateStressProfile` and `computeStressAtDepths` with `method='boussinesq_corner'`
 
@@ -96,7 +96,7 @@ Run `npm test` → **165 tests pass, 0 fail**.
 
 | Feature | Old Reference | Correct Reference |
 |---------|---------------|-------------------|
-| Shape Factors | Vesic/Meyerhof (sc=1+(B/L)(Nq/Nc)...) | **IS 6403:1981 Clause 5.1.2.1 Table 1** |
+| Shape Factors | Vesic/Meyerhof (sc=1+(B/L)(Nq/Nc)...) | **IS 6403:1981 Clause 5.1.2.1 Table 2** |
 | Depth Factors | Meyerhof (dq=1+2tanφ(1-sinφ)²Df/B) | **IS 6403:1981 Clause 5.1.2.1** (N_φ=tan²(45+φ/2)...) |
 | Inclination Factors | Meyerhof (ic=iq-(1-iq)/(Nc tanφ)) | **IS 6403:1981 Clause 5.1.2.1** (α=atan(H/V), ic=iq=(1-α/90)²...) |
 | Gross Safe qs | qu/FoS | **IS 6403:1981** (qs = qns + q) |
@@ -105,7 +105,7 @@ Run `npm test` → **165 tests pass, 0 fail**.
 
 ## Files Modified
 
-- `js/bearingCapacity.js` — Complete rewrite of shape/depth/inclination factors per IS 6403 Table 1, fixed qs, absolute moments, circular A'
+- `js/bearingCapacity.js` — Complete rewrite of shape/depth/inclination factors per IS 6403 Table 2, fixed qs, absolute moments, circular A'
 - `js/settlement.js` — Consolidation with per-sublayer callbacks, Schmertmann C1/C2 clamping
 - `js/stress.js` — Added `boussinesq_corner` method support
 - `tests/test_p3_p4_p5.test.js` — New regression tests for all fixes

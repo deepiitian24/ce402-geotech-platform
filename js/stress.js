@@ -32,8 +32,8 @@
  */
 export function boussinesqCorner({ q_kPa, B_m, L_m, z_m }) {
   if (z_m <= 0) {
-    // At or above surface - return full pressure
-    return q_kPa;
+    // Four identical rectangles meet at their common corner (Newmark superposition).
+    return q_kPa / 4;
   }
   if (q_kPa <= 0 || B_m <= 0 || L_m <= 0) {
     return 0;
